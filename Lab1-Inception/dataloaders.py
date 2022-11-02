@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 BATCH_SIZE = 64
 DATASET_ROOT_DIR = "./EMNIST_data"
-SPLIT_TYPE = "bymerge"
+SPLIT_TYPE = "balanced"
 
 
 TRANSFORMATIONS = transforms.Compose(
