@@ -1,4 +1,4 @@
-from typing import Any, Optional, Callable
+from typing import Any, Optional, Callable, List
 
 from dataclasses import dataclass
 
@@ -54,7 +54,7 @@ class InceptionBlock(nn.Module):
         self.branch_pool_1 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         self.branch_pool_2 = conv_block(in_channels, config.pool_proj, kernel_size=1)
 
-    def _forward(self, x: Tensor) -> list[Tensor]:
+    def _forward(self, x: Tensor) -> List[Tensor]:
         branch_1x1 = self.branch_1x1(x)
 
         branch_3x3 = self.branch_3x3_1(x)
