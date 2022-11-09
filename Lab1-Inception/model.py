@@ -35,7 +35,7 @@ class InceptionModel(nn.Module):
 
         self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.conv1 = BasicConv2d(3, 64, kernel_size=7, stride=1, padding=3)  # original: stride=2
+        self.conv1 = BasicConv2d(1, 64, kernel_size=7, stride=1, padding=3)  # original: stride=2
 
         self.conv2_1 = BasicConv2d(64, 64, kernel_size=1)
         self.conv2_2 = BasicConv2d(64, 192, kernel_size=3, padding=1)
