@@ -3,6 +3,7 @@ from typing import Optional
 from buildingblocks import InceptionConfig, InceptionBlock, BasicConv2d
 from torch import nn, Tensor
 import torch
+from torchvision import transforms
 
 
 inception_config_dict = {
@@ -23,7 +24,7 @@ inception_config_dict = {
 class InceptionModel(nn.Module):
     def __init__(
             self,
-            num_classes: int = 10,
+            num_classes: int = 47,
             transform_input: bool = False,
             config_dict: Optional[dict] = None,
             dropout: float = 0.4,
@@ -32,6 +33,7 @@ class InceptionModel(nn.Module):
         if config_dict is None:
             config_dict = inception_config_dict
         self.transform_input = transform_input
+        self._transforms = transforms.Normalize((0.1307,), (0.3081,))
 
         self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -58,14 +60,11 @@ class InceptionModel(nn.Module):
 
     def _transform_input(self, x: Tensor) -> Tensor:
         if self.transform_input:
-            x_ch0 = torch.unsqueeze(x[:, 0], 1) * (0.229 / 0.5) + (0.485 - 0.5) / 0.5
-            x_ch1 = torch.unsqueeze(x[:, 1], 1) * (0.224 / 0.5) + (0.456 - 0.5) / 0.5
-            x_ch2 = torch.unsqueeze(x[:, 2], 1) * (0.225 / 0.5) + (0.406 - 0.5) / 0.5
-            x = torch.cat((x_ch0, x_ch1, x_ch2), 1)
+            x = self._transforms(x)
         return x
 
     def _forward(self, x: Tensor) -> Tensor:
-        # N x 3 x 28 x 28
+        # N x 1 x 28 x 28
         x = self.conv1(x)
         # x = self.max_pool(x)
         # N x 64 x 28 x 28
@@ -102,7 +101,83 @@ class InceptionModel(nn.Module):
         x = torch.flatten(x, 1)
         # N x 1024
         x = self.fc(x)
-        # N x num_classes (10)
+        # N x num_classes (47)
+        return x
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = self._transform_input(x)
+        x = self._forward(x)
+        return x  # logits
+
+
+inception_small_config_dict = {
+    '2a': InceptionConfig(num_1x1=32, num_3x3_reduce=48, num_3x3=64, num_5x5_reduce=8, num_5x5=16, pool_proj=16),
+
+    '3a': InceptionConfig(num_1x1=32, num_3x3_reduce=64, num_3x3=96, num_5x5_reduce=16, num_5x5=32, pool_proj=32),
+    '3b': InceptionConfig(num_1x1=64, num_3x3_reduce=96, num_3x3=128, num_5x5_reduce=16, num_5x5=32, pool_proj=32),
+
+    '4a': InceptionConfig(num_1x1=96, num_3x3_reduce=128, num_3x3=160, num_5x5_reduce=32, num_5x5=64, pool_proj=64),
+}
+
+
+class InceptionModelSmall(nn.Module):
+    def __init__(
+            self,
+            num_classes: int = 47,
+            transform_input: bool = False,
+            config_dict: Optional[dict] = None,
+            dropout: float = 0.4,
+    ) -> None:
+        super(InceptionModelSmall, self).__init__()
+        if config_dict is None:
+            config_dict = inception_small_config_dict
+        self.transform_input = transform_input
+        self._transforms = transforms.Normalize((0.1307,), (0.3081,))
+
+        self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        self.conv1 = BasicConv2d(1, 64, kernel_size=7, stride=1, padding=3)
+
+        self.inception2a = InceptionBlock(in_channels=64, config=config_dict['2a'])
+
+        self.inception3a = InceptionBlock(in_channels=128, config=config_dict['3a'])
+        self.inception3b = InceptionBlock(in_channels=192, config=config_dict['3b'])
+
+        self.inception4a = InceptionBlock(in_channels=256, config=config_dict['4a'])
+
+        self.avg_pool = nn.AvgPool2d(kernel_size=7, stride=1)
+        self.dropout = nn.Dropout(p=dropout)
+        self.fc = nn.Linear(384, num_classes)
+
+    def _transform_input(self, x: Tensor) -> Tensor:
+        if self.transform_input:
+            x = self._transforms(x)
+        return x
+
+    def _forward(self, x: Tensor) -> Tensor:
+        # N x 1 x 28 x 28
+        x = self.conv1(x)
+        # N x 64 x 28 x 28
+        x = self.inception2a(x)
+        # N x 128 x 28 x 28
+        x = self.max_pool(x)
+        # N x 128 x 14 x 14
+        x = self.inception3a(x)
+        # N x 192 x 14 x 14
+        x = self.inception3b(x)
+        # N x 256 x 14 x 14
+        x = self.max_pool(x)
+        # N x 256 x 7 x 7
+        x = self.inception4a(x)
+        # N x 384 x 7 x 7
+        x = self.avg_pool(x)
+        # N x 384 x 1 x 1
+        x = self.dropout(x)
+        # N x 384 x 1 x 1
+        x = torch.flatten(x, 1)
+        # N x 384
+        x = self.fc(x)
+        # N x num_classes (47)
         return x
 
     def forward(self, x: Tensor) -> Tensor:
@@ -112,10 +187,18 @@ class InceptionModel(nn.Module):
 
 
 def main():
+    from dataloaders import EMNIST_TEST
+
     model = InceptionModel()
-    test_input = torch.rand((2, 3, 28, 28))
+    test_data, test_label = EMNIST_TEST[0]
+    test_input = test_data.view(1, 1, 28, 28)
 
     test_output = model(test_input)
+    print(test_output.shape)
+
+    model_small = InceptionModelSmall()
+
+    test_output = model_small(test_input)
     print(test_output.shape)
 
 
