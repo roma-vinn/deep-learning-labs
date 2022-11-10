@@ -77,7 +77,7 @@ def train(args, run_path):
 
     scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
     for t in range(args.num_epochs):
-        print(f"Epoch {t + 1}\n")
+        print(f"Epoch {t + 1}:", end='')
         train_loop(train_loader, model, loss_fn, optimizer, device)
         test_loop(test_loader, model, loss_fn, device)
         scheduler.step()
