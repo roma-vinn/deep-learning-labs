@@ -77,10 +77,11 @@ def train(args, run_path):
 
     scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
     for t in range(args.num_epochs):
-        print(f"Epoch {t + 1}:", end='')
+        print(f"Epoch {t + 1}:")
         train_loop(train_loader, model, loss_fn, optimizer, device)
         test_loop(test_loader, model, loss_fn, device)
         scheduler.step()
+        print()
 
     model_fn = os.path.join(run_path, "model.pt")
     torch.save(model.state_dict(), model_fn)
