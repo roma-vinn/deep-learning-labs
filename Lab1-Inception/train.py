@@ -16,8 +16,10 @@ def parse_args():
     parser.add_argument('--batch-size', type=int, default=64)
     parser.add_argument('--output-root', type=str, default='output/')
     parser.add_argument('--num-epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.01)
-    parser.add_argument('--augment', action='store_true')
+    parser.add_argument('--lr', type=float, default=0.01, help='Initial learning rate')
+    parser.add_argument('--step-size', type=int, default=20, help='Step size for StepLR scheduler')
+    parser.add_argument('--gamma', type=float, default=0.1, help='Gamma value for StepLR scheduler')
+    parser.add_argument('--augment', action='store_true', help='flag to use augmented dataset')
 
     args = parser.parse_args()
 
@@ -75,7 +77,7 @@ def train(args, run_path):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
 
-    scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
+    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
     for t in range(args.num_epochs):
         print(f"Epoch {t + 1}:")
         train_loop(train_loader, model, loss_fn, optimizer, device)
