@@ -187,19 +187,20 @@ class InceptionModelSmall(nn.Module):
 
 
 def main():
-    from dataloaders import EMNIST_TEST
+    from dataloaders import get_dataloader
+
+    # prepare test data
+    test_loader = iter(get_dataloader(train=False, augment=False, batch_size=2))
+    test_data, test_label = next(test_loader)
+    print(test_data.shape)
 
     model = InceptionModel()
-    test_data, test_label = EMNIST_TEST[0]
-    test_input = test_data.view(1, 1, 28, 28)
-
-    test_output = model(test_input)
+    test_output = model(test_data)
     print(test_output.shape)
 
     model_small = InceptionModelSmall()
-
-    test_output = model_small(test_input)
-    print(test_output.shape)
+    test_small_output = model_small(test_data)
+    print(test_small_output.shape)
 
 
 if __name__ == '__main__':
