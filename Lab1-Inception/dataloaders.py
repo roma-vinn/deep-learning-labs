@@ -3,8 +3,7 @@ from torchvision.datasets import EMNIST
 from torch.utils.data import DataLoader
 
 
-BATCH_SIZE = 64
-DATASET_ROOT_DIR = "./EMNIST_data"
+DATASET_ROOT_DIR = "demos/EMNIST_data"
 SPLIT_TYPE = "balanced"
 
 
@@ -29,7 +28,17 @@ EMNIST_AUG_TRAIN, EMNIST_AUG_TEST = (
 )
 
 
-# # create dataloader
-# train_loader = DataLoader(emnist_train, batch_size=BATCH_SIZE, shuffle=True)
-# test_loader = DataLoader(emnist_test, batch_size=BATCH_SIZE, shuffle=True)
-
+def get_dataloader(split: str, augment=True, batch_size=64, shuffle=True) -> DataLoader:
+    assert split in ['train', 'test'], 'split should be either "train" or "test"'
+    loader = None
+    if split == 'train':
+        if augment:
+            loader = DataLoader(EMNIST_AUG_TRAIN, batch_size=batch_size, shuffle=shuffle)
+        else:
+            loader = DataLoader(EMNIST_TRAIN, batch_size=batch_size, shuffle=shuffle)
+    else:
+        if augment:
+            loader = DataLoader(EMNIST_AUG_TEST, batch_size=batch_size, shuffle=shuffle)
+        else:
+            loader = DataLoader(EMNIST_TEST, batch_size=batch_size, shuffle=shuffle)
+    return loader
