@@ -28,6 +28,7 @@ def parse_args():
 
 def train_loop(dataloader, model, loss_fn, optimizer, device):
     iterator = tqdm(enumerate(dataloader), total=len(dataloader))
+    loss_list = []
 
     for batch_num, (X, y) in iterator:
         X = X.to(device)
@@ -35,6 +36,7 @@ def train_loop(dataloader, model, loss_fn, optimizer, device):
 
         get_pred = model(X)
         loss = loss_fn(get_pred, y)
+        loss_list.append(loss)
 
         optimizer.zero_grad()
         loss.backward()
@@ -43,6 +45,9 @@ def train_loop(dataloader, model, loss_fn, optimizer, device):
         if batch_num % 100 == 0 and batch_num != 0:
             loss, current = loss.item(), batch_num * len(X)
             iterator.set_description(f"loss: {loss:>7f}")
+
+    avg_loss = sum(loss_list) / len(loss_list)
+    return [avg_loss]
 
 
 def test_loop(dataloader, model, loss_fn, device):
@@ -62,7 +67,9 @@ def test_loop(dataloader, model, loss_fn, device):
 
     test_loss /= num_batches
     true_ /= size
-    print(f"Accuracy: {(100 * true_):.3f}%")
+    test_acc = 100 * true_
+    print(f"Accuracy: {test_acc:.3f}%")
+    return [test_loss, test_acc]
 
 
 def train(args, run_path):
@@ -78,15 +85,36 @@ def train(args, run_path):
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
+
+    train_losses, test_losses = [], []
+    test_accuracies = []
+
     for t in range(args.num_epochs):
         print(f"Epoch {t + 1}:")
-        train_loop(train_loader, model, loss_fn, optimizer, device)
-        test_loop(test_loader, model, loss_fn, device)
+        train_loss = train_loop(train_loader, model, loss_fn, optimizer, device)
+        train_losses.append(train_loss)
+
+        test_loss, test_acc = test_loop(test_loader, model, loss_fn, device)
+        test_losses.append(test_loss)
+        test_accuracies.append(test_acc)
+
         scheduler.step()
         print()
 
     model_fn = os.path.join(run_path, "model.pt")
     torch.save(model.state_dict(), model_fn)
+    print(f'Saved model to {model_fn}')
+
+    save_obj = {
+        'args': args,
+        'train_losses': train_losses,
+        'test_losses': test_losses,
+        'test_accuracies': test_accuracies,
+    }
+    results_fn = os.path.join(run_path, "results.pt")
+    with open(results_fn, 'wb') as f:
+        torch.save(save_obj, f)
+    print(f'Saved results to {results_fn}')
 
 
 def main():
