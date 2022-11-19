@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.01, help='Initial learning rate')
     parser.add_argument('--step-size', type=int, default=20, help='Step size for StepLR scheduler')
     parser.add_argument('--gamma', type=float, default=0.1, help='Gamma value for StepLR scheduler')
-    parser.add_argument('--augment', action='store_true', help='flag to use augmented dataset')
+    parser.add_argument('--augment', type=str, default=None, help='optional augmentations of dataset (easy/complex)')
 
     args = parser.parse_args()
 
@@ -78,8 +78,8 @@ def train(args, run_path):
 
     model = InceptionModelSmall(num_classes=47).to(device)
 
-    train_loader = get_dataloader(train=True, augment=args.augment, batch_size=args.batch_size)
-    test_loader = get_dataloader(train=False, augment=args.augment, batch_size=args.batch_size)
+    train_loader = get_dataloader(train=True, batch_size=args.batch_size, augment=args.augment)
+    test_loader = get_dataloader(train=False, batch_size=args.batch_size, augment=args.augment)
 
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
